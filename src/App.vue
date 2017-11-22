@@ -2,7 +2,9 @@
   <div id="app">
     <m-header></m-header>
     <m-nav></m-nav>
-    <router-view></router-view>
+    <keep-alive>
+      <router-view></router-view>
+    </keep-alive>
   </div>
 </template>
 
