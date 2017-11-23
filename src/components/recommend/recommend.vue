@@ -1,12 +1,12 @@
 <template>
   <div class="recommend-wrapper">
-    <scroll class="recommend-content" :data="songListData">
+    <scroll ref="scroll" class="recommend-content" :data="songListData">
       <div>
         <div class="slider-wrapper">
-          <slider :is-ready="sliderDataReady">
+          <slider :data="sliderData">
             <div v-for="(item, index) in sliderData">
               <a :href="item.linkUrl">
-                <img :src="item.picUrl">
+                <img @load="imgOnload" :src="item.picUrl">
               </a>
             </div>
           </slider>
@@ -16,7 +16,7 @@
           <ul>
             <li v-for="item in songListData" class="item">
               <div class="icon">
-                <img :src="item.imgurl" with="60" height="60">
+                <img v-lazy="item.imgurl" with="60" height="60">
               </div>
               <div class="text">
                 <h2 class="name" v-html="item.creator.name"></h2>
@@ -25,6 +25,9 @@
             </li>
           </ul>
         </div>
+      </div>
+      <div class="loading-wrapper" v-show="!songListData.length">
+        <loading></loading>
       </div>
     </scroll>
   </div>
@@ -35,13 +38,13 @@
   import {getRecommend, getSongList} from 'api/getRecommend.js';
   import {ERR_OK} from 'api/config.js';
   import Scroll from 'base/scroll/scroll.vue';
+  import Loading from 'base/loading/loading.vue';
 
   export default {
     data() {
       return {
         sliderData: [],
-        songListData: [],
-        sliderDataReady: false
+        songListData: []
       };
     },
     created() {
@@ -53,13 +56,13 @@
     },
     components: {
       slider: Slider,
-      scroll: Scroll
+      scroll: Scroll,
+      loading: Loading
     },
     methods: {
       _getRecommend() {
         getRecommend().then((res) => {
           if (res.code === ERR_OK) {
-            console.log(res.data);
             this.sliderData = res.data.slider;
           }
         });
@@ -70,16 +73,14 @@
             this.songListData = res.data.list;
           }
         });
-      }
-    },
-    watch: {
-      sliderData(val) {
-        if (val.length > 0) {
-          this.sliderDataReady = true;
-        }
       },
-      songListData(val) {
-        console.log(val);
+      imgOnload() {
+        // slider 图片加载完成的时候调用这个函数
+        // 这个方法会调用滚动组件 scroll 的 refresh 方法 刷新组件重新计算属性
+        if(!this.isCheckedLoad) {
+          this.$refs.scroll.refresh();
+          this.isCheckedLoad = true;
+        }
       }
     }
   };
@@ -125,4 +126,9 @@
               color: $color-text
             .desc
               color: $color-text-d
+    .loading-wrapper
+      position: absolute
+      width: 100%
+      top: 50%
+      transform: translateY(-50%)
 </style>

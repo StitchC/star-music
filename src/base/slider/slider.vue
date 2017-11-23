@@ -13,7 +13,7 @@
   /**
    * 基础组件: slider 轮播组件
    *
-   * @param {Boolean} isReady - 考虑到插槽里面的元素可能是一个异步过程 所以当插槽元素异步获取完毕之后将这个参数设置为 true 组件内部便会设置插槽内部的元素的样式，默认值为false
+   * @param {Boolean} data - 插件内部数据 监听数据的变化 有变化便会重新初始化组件
    * @param {Boolean} loop - 设定轮播插件是否循环轮播 默认为true
    * @param {Boolean} autoPlay - 设定轮播组件是否自动播放 默认为true
    * @param {Number} interval - 设定轮播组件的切换间隔时间 默认为 4000(毫秒)
@@ -30,9 +30,11 @@
       };
     },
     props: {
-      isReady: {
-        type: Boolean,
-        default: false
+      data: {
+        type: Array,
+        default: () => {
+          return [];
+        }
       },
       loop: {
         type: Boolean,
@@ -109,7 +111,7 @@
       }
     },
     watch: {
-      isReady(val) {
+      data() {
         setTimeout(() => {
           this._setSliderWidth();
           this._initdots();
