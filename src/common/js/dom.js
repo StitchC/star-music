@@ -17,3 +17,14 @@ export function addClass(el, newClass) {
 export function hasClass(el, className) {
   return el.className.indexOf(className) > 0;
 }
+
+// dom 操作data 自定义属性
+export function dataAttribute(el, name, val) {
+  const prefix = 'data-';
+  name = prefix + name;
+  if(val) {
+    return el.setAttribute(name, val);
+  }else {
+    return el.getAttribute(name);
+  }
+}

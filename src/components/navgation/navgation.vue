@@ -3,14 +3,14 @@
     <router-link tag="div" class="nav-item" to="/recommend">
       <span class="item-title">推荐</span>
     </router-link>
+    <router-link tag="div" class="nav-item" to="/singer">
+      <span class="item-title">歌手</span>
+    </router-link>
     <router-link tag="div" class="nav-item" to="/rank">
       <span class="item-title">排行</span>
     </router-link>
     <router-link tag="div" class="nav-item" to="/search">
       <span class="item-title">搜索</span>
-    </router-link>
-    <router-link tag="div" class="nav-item" to="/singer">
-      <span class="item-title">歌手</span>
     </router-link>
   </div>
 </template>
