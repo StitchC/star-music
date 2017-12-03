@@ -1,7 +1,7 @@
 <template>
   <div class="loading">
     <img src="./loading.gif" width="24" height="24">
-    <p class="desc"></p>
+    <p class="desc">{{desc}}</p>
   </div>
 </template>
 
@@ -13,7 +13,7 @@
    * */
 
   export default {
-    pros: {
+    props: {
       desc: {
         type: String,
         default: '加载中...'

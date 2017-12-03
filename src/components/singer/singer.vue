@@ -9,12 +9,12 @@
   import {getSingerList} from 'api/singer.js';
   import {ERR_OK} from 'api/config.js';
   import Singer from 'common/js/Singer.js';
-  import listView from 'base/listView/listView.vue';
+  import listView from 'base/list-view/list-view.vue';
   import {mapMutations} from 'vuex';  // vuex 语法糖
 
   const HOT_SINGER_TITLE = '热门'; // 热门歌手分类的标题
   const HOT_SINGER_LEN = 10; // 热门歌手的数量
-  
+
   export default {
     data() {
       return {

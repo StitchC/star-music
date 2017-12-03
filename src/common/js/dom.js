@@ -28,3 +28,39 @@ export function dataAttribute(el, name, val) {
     return el.getAttribute(name);
   }
 }
+
+
+// 对不同浏览器厂商加上 css3 前缀函数
+function vendor() {
+  let tempElem = document.createElement('div');
+  let style = tempElem.style;
+  
+  let vendorName = {
+    webkit: 'webkitTransform',
+    Moz: 'MozTransform',
+    O: 'OTransform',
+    ms: 'msTransform',
+    standard: 'transform'
+  };
+  
+  for(let key in vendorName) {
+    if(style[vendorName[key]] !== undefined) {
+      return key;
+    }
+  }
+  return false;
+}
+
+export function prefixStyle(style) {
+  let vendorResult = vendor();
+  
+  if(!vendorResult) {
+    return false;
+  }
+  
+  if(vendorResult === 'standard') {
+    return style;
+  }
+  
+  return vendorResult + style.charAt(0).toUpperCase() + style.substr(1);
+}
