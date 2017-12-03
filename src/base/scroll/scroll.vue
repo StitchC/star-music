@@ -49,12 +49,6 @@
     },
     methods: {
       _initScroll() {
-        if(!this.$refs.scroll) {
-          // 如果实例化 better-scroll 的时候还没有加载完成dom 隔20毫秒再调用一次
-          setTimeout(() => {
-            this._initScroll();
-          }, 20);
-        }
         this.scroll = new Bscroll(this.$refs.scroll, {
           probeType: this.probeType,
           click: this.click

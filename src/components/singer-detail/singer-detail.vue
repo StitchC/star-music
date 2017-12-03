@@ -1,6 +1,6 @@
 <template>
   <transition name="slide">
-    <div class="singer-detail"></div>
+    <music-list :songs="songs" :title="title" :bg-img="bgImg"></music-list>
   </transition>
 </template>
 
@@ -8,8 +8,15 @@
   import {mapGetters} from 'vuex';
   import {ERR_OK} from 'api/config.js';
   import {getSingerDetails} from 'api/singer.js';
+  import {createSong} from 'common/js/song';
+  import musicList from 'components/music-list/music-list.vue';
 
   export default {
+    data() {
+      return {
+        songs: []
+      };
+    },
     created() {
       this._getSingerDetails();
     },
@@ -21,12 +28,32 @@
         }
         return getSingerDetails(this.singer.user_id).then((res) => {
           if(res.code === ERR_OK) {
-            console.log(res);
+            this.songs = this._normalizeSongs(res.data.list);
+            console.log(this.songs);
           }
         });
+      },
+      _normalizeSongs(list) {
+        let result = [];
+        list.forEach((item) => {
+          let {musicData} = item;
+          if (musicData.songid && musicData.albumid) {
+            result.push(createSong(musicData));
+          }
+        });
+        return result;
       }
     },
+    components: {
+      'music-list': musicList
+    },
     computed: {
+      title() {
+        return this.singer.name;
+      },
+      bgImg() {
+        return this.singer.avatar;
+      },
       ...mapGetters([
         'singer'
       ])
@@ -37,17 +64,9 @@
 <style lang="stylus" rel="stylesheet/stylus">
   @import "../../common/stylus/variable.styl"
 
-  .singer-detail
-    position: fixed
-    top: 0
-    left: 0
-    width: 100%
-    height: 100%
-    background-color: $color-background
-    z-index: 50
-    &.slide-enter-active,.slide-leave-active
-      transition: all .3s ease
-    &.slide-enter,.slide-leave-to
-      transform: translate3d(100%, 0, 0)
+  .slide-enter-active,.slide-leave-active
+    transition: all .3s ease
+  .slide-enter,.slide-leave-to
+    transform: translate3d(100%, 0, 0)
 
 </style>
