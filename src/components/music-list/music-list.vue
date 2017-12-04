@@ -16,7 +16,7 @@
       <div class="bg-layer" ref="layer"></div>
       <scroll :data="songs" class="list" ref="list" :probe-type="probeType" :listen-scroll="listenScroll" @scroll="onScroll">
         <div class="song-list-wrap">
-          <song-list :songList="songs"></song-list>
+          <song-list :songList="songs" @select="selectSong"></song-list>
         </div>
         <div class="loading-wrap" v-show="!songs.length">
           <loading></loading>
@@ -37,6 +37,7 @@
     import SongList from 'base/song-list/song-list.vue';
     import Loading from 'base/loading/loading.vue';
     import {prefixStyle} from 'common/js/dom.js';
+    import {mapActions} from 'vuex';
 
     const RESERVE_HEIGHT = 40; // 顶部歌手名栏的高度
     const transform = prefixStyle('transform');
@@ -90,7 +91,16 @@
           back() {
             this.$router.push('/singer');
           },
-          randomPlay() {}
+          selectSong(item, index) {
+            this.selectPlay({
+              list: this.songs,
+              index: index
+            });
+          },
+          randomPlay() {},
+          ...mapActions([
+            'selectPlay'
+          ])
         },
         watch: {
           posY(val) {
@@ -207,7 +217,6 @@
     .list
       position: fixed
       width: 100%
-      top: 0
       bottom: 0
       background: $color-background
       .song-list-wrap
