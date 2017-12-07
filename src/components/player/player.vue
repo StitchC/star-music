@@ -30,17 +30,24 @@
           </div>
         </div>
         <div class="bottom">
-          <div class="operate">
-            <div class="icon i-left">
-              <i class="icon-sequence"></i>
+          <div class="progress-wrapper">
+            <span class="time time-l">{{currentTime | formatTime}}</span>
+            <div class="progress-bar-wrapper">
+              <progress-bar :percent="playPercent" @percent-change="progressChange"></progress-bar>
             </div>
-            <div class="icon i-left">
+            <span class="time time-r">-{{residueTime | formatTime}}</span>
+          </div>
+          <div class="operate">
+            <div class="icon i-left" @click="changeMode">
+              <i :class="modeIcon"></i>
+            </div>
+            <div class="icon i-left" :class="disabled">
               <i class="icon-prev" @click="prevSong"></i>
             </div>
-            <div class="icon i-center">
+            <div class="icon i-center" :class="disabled">
               <i @click="togglePlay" :class="playingStateIcon"></i>
             </div>
-            <div class="icon i-right">
+            <div class="icon i-right" :class="disabled">
               <i class="icon-next" @click="nextSong"></i>
             </div>
             <div class="icon i-right">
@@ -60,14 +67,16 @@
           <p class="desc" v-html="currentSong.singer"></p>
         </div>
         <div class="control">
-          <i @click.stop="togglePlay" :class="miniPlayingStateIcon"></i>
+          <progress-circle :circle-area="circleArea" :percent="playPercent">
+            <i @click.stop="togglePlay" class="mini-progress-bar" :class="miniPlayingStateIcon"></i>
+          </progress-circle>
         </div>
         <div class="control">
           <i class="icon-playlist"></i>
         </div>
       </div>
     </transition>
-    <audio :src="currentSong.url" ref="audio" @canplay="ready" @error="error"></audio>
+    <audio :src="currentSong.url" ref="audio" @canplay="ready" @error="error" @timeupdate="updateTime" @ended="end"></audio>
   </div>
 </template>
 
@@ -76,17 +85,29 @@
    * 播放器组件
    *
    * */
+  import ProgressBar from 'base/progress-bar/progress-bar.vue';
+  import ProgressCircle from 'base/progress-circle/progress-circle.vue';
   import {mapGetters, mapMutations} from 'vuex';
   import animations from 'create-keyframe-animation';
   import {prefixStyle} from 'common/js/dom.js';
+  import {playerMode} from 'common/js/config.js';
+  import {shuffle} from 'common/js/util.js';
 
   const transform = prefixStyle('transform');
 
   export default {
     data() {
       return {
-        songReady: false
+        songReady: false,
+        currentTime: 0,
+        residueTime: 0,
+        playPercent: 0,
+        circleArea: 32
       };
+    },
+    components: {
+      'progress-bar': ProgressBar,
+      'progress-circle': ProgressCircle
     },
     methods: {
       back() {
@@ -131,7 +152,50 @@
       ready() {
         this.songReady = true;
       },
-      error() {},
+      error() {
+        this.songReady = true;
+      },
+      updateTime(event) {
+        this.currentTime = event.target.currentTime;
+        this.playPercent = (this.currentTime | 0) / this.currentSong.duration;
+        this.residueTime = this.currentSong.duration - (this.currentTime | 0);
+      },
+      end() {
+        if(this.mode === playerMode.loop) {
+          this.loop();
+          return;
+        }
+        this.setCurIndex(this.currentIndex + 1);
+      },
+      loop() {
+        this.currentTime = 0;
+      },
+      progressChange(newPercent) {
+        this.$refs.audio.currentTime = this.currentSong.duration * newPercent;
+        if(!this.playing) {
+          this.togglePlay();
+        }
+      },
+      changeMode() {
+        let mode = (this.mode + 1) % 3;
+        this.setPlayMode(mode);
+        let list = null;
+
+        if(this.mode === playerMode.random) {
+          let tmpList = [...this.playList];
+          list = shuffle(tmpList);
+        }else {
+          list = this.sequenceList;
+        }
+        this._resetCurrentIndex(list);
+        this.setPlayList(list);
+      },
+      _resetCurrentIndex(list) {
+        let index = list.findIndex((item) => {
+          return item.id === this.currentSong.id;
+        });
+        this.setCurIndex(index);
+      },
       enter(el, done) {
         const {x, y, scale} = this._getPosAndScale();
 
@@ -199,11 +263,17 @@
       ...mapMutations({
         setFullScreen: 'SET_FULL_SCREEN',
         setPlayingStatus: 'SET_PLAYING_STATE',
-        setCurIndex: 'SET_CURRENT_INDEX'
+        setCurIndex: 'SET_CURRENT_INDEX',
+        setPlayMode: 'SET_MODE',
+        setPlayList: 'SET_PLAY_LIST'
       })
     },
     watch: {
-      currentSong(val) {
+      currentSong(newSong, oldSong) {
+        if(newSong.id === oldSong.id) {
+          console.log(newSong);
+          return;
+        }
         this.$nextTick(() => {
           this.$refs.audio.play();
         });
@@ -226,13 +296,31 @@
       playingRotate() {
         return this.playing ? 'play' : 'play stop';
       },
+      disabled() {
+        return this.songReady ? '' : 'disable';
+      },
+      modeIcon() {
+        return this.mode === playerMode.sequence ? 'icon-sequence' : this.mode === playerMode.loop ? 'icon-loop' : 'icon-random';
+      },
       ...mapGetters([
         'fullScreen',
         'playList',
+        'sequenceList',
         'currentSong',
         'currentIndex',
-        'playing'
+        'playing',
+        'mode'
       ])
+    },
+    filters: {
+      formatTime(time) {
+        let minutes = (time / 60 | 0) + '';
+        let second = (time % 60 | 0) + '';
+
+        second = second.padStart(2, '0');
+
+        return `${minutes}:${second}`;
+      }
     }
   };
 </script>
@@ -327,6 +415,26 @@
         position: absolute
         bottom: 50px
         width: 100%
+        .progress-wrapper
+          display: flex
+          align-items: center
+          width: 80%
+          margin: 0 auto
+          padding: 10px 0
+          .time
+            flex: 0 0 30px
+            line-height: 30px
+            width: 30px
+            color: $color-text
+            font-size: $font-size-small
+            &.time-l
+              padding-right: 10px
+              text-align: left
+            &.time-r
+              padding-left: 10px
+              text-align: right
+          .progress-bar-wrapper
+            flex: 1
         .operate
           display: flex
           align-items: center
@@ -400,14 +508,18 @@
         flex: 0 0 30px
         width: 30px
         padding: 0 10px
+        .mini-progress-bar
+          position: absolute
+          top: 0
+          left: 0
         .icon-play-mini, .icon-pause-mini, .icon-playlist
           font-size: 30px
           color: $color-theme-d
         .icon-mini
-          font-size: 32px
           position: absolute
           left: 0
           top: 0
+          font-size: 32px
 
   @keyframes rotate
     0%

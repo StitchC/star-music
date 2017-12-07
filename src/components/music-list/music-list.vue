@@ -37,7 +37,7 @@
     import SongList from 'base/song-list/song-list.vue';
     import Loading from 'base/loading/loading.vue';
     import {prefixStyle} from 'common/js/dom.js';
-    import {mapActions} from 'vuex';
+    import {mapActions, mapGetters, mapMutations} from 'vuex';
 
     const RESERVE_HEIGHT = 40; // 顶部歌手名栏的高度
     const transform = prefixStyle('transform');
@@ -82,9 +82,20 @@
         computed: {
             backgroundImg() {
               return `background-image: url(${this.bgImg})`;
-            }
+            },
+            ...mapGetters([
+              'playList'
+            ])
         },
         methods: {
+          _copySongList() {
+            // 赋值歌曲列表副本
+            let tempArr = [];
+            for(let i = 0; i < this.songs.length; i++) {
+              tempArr.push(this.songs[i]);
+            }
+            return tempArr;
+          },
           onScroll(pos) {
            this.posY = pos.y;
           },
@@ -92,15 +103,24 @@
             this.$router.push('/singer');
           },
           selectSong(item, index) {
+            let songs = this._copySongList();
             this.selectPlay({
-              list: this.songs,
+              list: songs,
               index: index
             });
           },
-          randomPlay() {},
+          randomPlay() {
+            // 提交 action 更改播放列表，顺序列表的播放
+            this.setRandomPlay(this.songs);
+          },
           ...mapActions([
-            'selectPlay'
-          ])
+            'selectPlay',
+            'setRandomPlay'
+          ]),
+          ...mapMutations({
+            setPlayList: 'SET_PLAY_LIST',
+            setPlayMode: 'SET_MODE'
+          })
         },
         watch: {
           posY(val) {
