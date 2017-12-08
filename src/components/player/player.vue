@@ -17,7 +17,11 @@
           <h2 class="title" v-html="currentSong.name"></h2>
           <h2 class="sub-title" v-html="currentSong.singer"></h2>
         </div>
-        <div class="middle">
+        <div class="middle"
+             @touchstart.prevent="middleTouchStart"
+             @touchmove.prevent="middleTouchMove"
+             @touchend="middleTouchEnd"
+        >
           <div class="middle-inner">
             <div class="cd-wrapper" ref="cdWrapper">
               <div class="cd" :class="playingRotate">
@@ -25,11 +29,25 @@
               </div>
             </div>
             <div class="player-lyric-wrapper">
-              <div class="player-lyric"></div>
+              <div class="player-lyric">{{currentLyricSentence}}</div>
             </div>
           </div>
+          <scroll class="full-screen-lyric-wrapper" ref="lyricScroll" :data="currentLyric && currentLyric.lines">
+            <div class="full-screen-lyric">
+              <div v-if="currentLyric !== null">
+                <p ref="lyricLine"
+                   class="lyric-text"
+                   :class="{'current': currentLineNum === index}"
+                   v-for="(line,index) in currentLyric.lines">{{line.txt}}</p>
+              </div>
+            </div>
+          </scroll>
         </div>
         <div class="bottom">
+          <div class="dot-wrapper">
+            <span class="dot" :class="{'active':currentShow === 0}"></span>
+            <span class="dot" :class="{'active':currentShow === 1}"></span>
+          </div>
           <div class="progress-wrapper">
             <span class="time time-l">{{currentTime | formatTime}}</span>
             <div class="progress-bar-wrapper">
@@ -64,7 +82,7 @@
         </div>
         <div class="text">
           <h2 class="name" v-html="currentSong.name"></h2>
-          <p class="desc" v-html="currentSong.singer"></p>
+          <p class="desc" v-text="currentLyricSentence"></p>
         </div>
         <div class="control">
           <progress-circle :circle-area="circleArea" :percent="playPercent">
@@ -92,24 +110,89 @@
   import {prefixStyle} from 'common/js/dom.js';
   import {playerMode} from 'common/js/config.js';
   import {shuffle} from 'common/js/util.js';
+  import LyricParse from 'lyric-parser';
+  import Scroll from 'base/scroll/scroll';
 
   const transform = prefixStyle('transform');
+  const transitionDuration = prefixStyle('transitionDuration');
+  const SHOW_CD = 0;
+  const SHOW_LYRIC = 1;
 
   export default {
     data() {
       return {
         songReady: false,
         currentTime: 0,
+        currentLyric: null,
+        currentLineNum: 0,
+        currentLyricSentence: '',
+        currentShow: SHOW_CD,
         residueTime: 0,
         playPercent: 0,
         circleArea: 32
       };
     },
+    created() {
+      this.touch = {};
+    },
     components: {
+      'scroll': Scroll,
       'progress-bar': ProgressBar,
       'progress-circle': ProgressCircle
     },
     methods: {
+      middleTouchStart(event) {
+        this.touch.touchStart = true;
+        this.touch.startX = event.touches[0].pageX;
+        this.touch.startY = event.touches[0].pageY;
+      },
+      middleTouchMove(event) {
+        if(!this.touch.touchStart) {
+          return;
+        }
+        let touch = event.touches[0];
+        let deltaX = touch.pageX - this.touch.startX;
+        let deltaY = touch.pageY - this.touch.startY;
+
+        // 当向上滚动歌词列表的时候 不进行界面的切换
+        if(Math.abs(deltaX) < Math.abs(deltaY)) {
+          return;
+        }
+        // 定义此时歌词列表距离自身左边的距离 即当前歌词列表距离屏幕最右侧边界的距离
+        // 如果此时是 cd 显示 那么它的距离就是0
+        // 如果此时不是cd 显示 那么它的距离就是 -window.innerWidth 即此时它就显示在视窗中央
+        let offsetLeft = this.currentShow === SHOW_CD ? 0 : -window.innerWidth;
+        let moveDistance = Math.min(0, Math.max(-window.innerWidth, offsetLeft + deltaX));
+        this.touch.movePercent = Math.abs(moveDistance / window.innerWidth);
+        this.$refs.lyricScroll.$el.style[transform] = `translate3d(${moveDistance}px,0,0)`;
+        this.$refs.cdWrapper.style.opacity = 1 - this.touch.movePercent;
+      },
+      middleTouchEnd() {
+        let offsetLeft;
+        let opacityPercent;
+        if(this.currentShow === SHOW_CD) {
+          if(this.touch.movePercent > 0.1) {
+            offsetLeft = -window.innerWidth;
+            opacityPercent = 0;
+            this.$refs.cdWrapper.style.opacity = opacityPercent;
+            this.currentShow = SHOW_LYRIC;
+          }else {
+            offsetLeft = 0;
+          }
+        }else {
+          if(this.touch.movePercent < 0.8) {
+            offsetLeft = 0;
+            opacityPercent = 1;
+            this.$refs.cdWrapper.style.opacity = opacityPercent;
+            this.currentShow = SHOW_CD;
+          }else {
+            offsetLeft = -window.innerWidth;
+          }
+        }
+        let time = 300;
+        this.$refs.lyricScroll.$el.style[transform] = `translate3d(${offsetLeft}px,0,0)`;
+        this.$refs.lyricScroll.$el.style[transitionDuration] = `${time}ms`;
+      },
       back() {
         this.setFullScreen(false);
       },
@@ -118,16 +201,24 @@
       },
       togglePlay() {
         this.setPlayingStatus(!this.playing);
+        if(this.currentLyric) {
+          this.currentLyric.togglePlay();
+        }
       },
       prevSong() {
         if(!this.songReady) {
           return;
         }
-        let index = this.currentIndex - 1;
-        if(index === -1) {
-          index = this.playList.length - 1;
+        if(this.playList.length === 1) {
+          // 如果此时的歌单列表只有一首歌 那么调用loop 函数
+          this.loop();
+        }else {
+          let index = this.currentIndex - 1;
+          if(index === -1) {
+            index = this.playList.length - 1;
+          }
+          this.setCurIndex(index);
         }
-        this.setCurIndex(index);
         // 如果此时是暂停播放状态 将他转变为播放状态
         if(!this.playing) {
           this.togglePlay();
@@ -138,11 +229,16 @@
         if(!this.songReady) {
           return;
         }
-        let index = this.currentIndex + 1;
-        if(index === this.playList.length) {
-          index = 0;
+        if(this.playList.length === 1) {
+          // 如果此时的歌单列表只有一首歌 那么调用loop 函数
+          this.loop();
+        }else {
+          let index = this.currentIndex + 1;
+          if(index === this.playList.length) {
+            index = 0;
+          }
+          this.setCurIndex(index);
         }
-        this.setCurIndex(index);
         // 如果此时是暂停播放状态 将他转变为播放状态
         if(!this.playing) {
           this.togglePlay();
@@ -171,7 +267,9 @@
         this.currentTime = 0;
       },
       progressChange(newPercent) {
-        this.$refs.audio.currentTime = this.currentSong.duration * newPercent;
+        let currentTime = this.currentSong.duration * newPercent;
+        this.$refs.audio.currentTime = currentTime;
+        this.currentLyric.seek(currentTime * 1000);
         if(!this.playing) {
           this.togglePlay();
         }
@@ -182,13 +280,29 @@
         let list = null;
 
         if(this.mode === playerMode.random) {
-          let tmpList = [...this.playList];
-          list = shuffle(tmpList);
+          list = shuffle(this.playList);
         }else {
           list = this.sequenceList;
         }
         this._resetCurrentIndex(list);
         this.setPlayList(list);
+      },
+      getSongLyric() {
+        this.currentSong.getSongLyric().then((lyric) => {
+            this.currentLyric = new LyricParse(lyric, this.lyricHandler);
+            console.log(this.currentLyric);
+            if(this.playing) {
+              this.currentLyric.play();
+            }
+        });
+      },
+      lyricHandler({lineNum, txt}) {
+        this.currentLineNum = lineNum;
+        this.currentLyricSentence = txt;
+        if(lineNum > 5) {
+          let curLyricElem = this.$refs.lyricLine[lineNum - 5];
+          this.$refs.lyricScroll.scrollToElement(curLyricElem, 1000);
+        }
       },
       _resetCurrentIndex(list) {
         let index = list.findIndex((item) => {
@@ -271,12 +385,18 @@
     watch: {
       currentSong(newSong, oldSong) {
         if(newSong.id === oldSong.id) {
-          console.log(newSong);
           return;
         }
-        this.$nextTick(() => {
+        if(this.currentLyric) {
+          this.currentLyric.seek(0);
+          this.currentLyric.stop();
+          this.$refs.lyricScroll.scrollToElement(this.$refs.lyricLine[0], 1000);
+        }
+        // 防止微信从后台切换为前台的时候 歌曲不能播放
+        setTimeout(() => {
           this.$refs.audio.play();
-        });
+          this.getSongLyric();
+        }, 1000);
       },
       playing(newPlayState) {
         const audio = this.$refs.audio;
@@ -411,10 +531,52 @@
                 width: 100%
                 height: 100%
                 border-radius: 50%
+        .player-lyric-wrapper
+          width: 80%
+          margin: 30px auto 0 auto
+          overflow: hidden
+          text-align: center
+          .player-lyric
+            height: 20px
+            line-height: 20px
+            font-size: $font-size-medium
+            color: $color-text-l
+        .full-screen-lyric-wrapper
+          display: inline-block
+          vertical-align: top
+          width: 100%
+          height: 100%
+          overflow: hidden
+          .full-screen-lyric
+            width: 80%
+            margin: 0 auto
+            overflow: hidden
+            text-align: center
+            .lyric-text
+              line-height: 32px
+              color: $color-text-l
+              font-size: $font-size-medium
+              &.current
+                color: $color-text
       .bottom
         position: absolute
         bottom: 50px
         width: 100%
+        .dot-wrapper
+          text-align: center
+          font-size: 0
+          .dot
+            display: inline-block
+            vertical-align: middle
+            margin: 0 4px
+            width: 8px
+            height: 8px
+            border-radius: 50%
+            background: $color-text-l
+            &.active
+              width: 20px
+              border-radius: 5px
+              background: $color-text-ll
         .progress-wrapper
           display: flex
           align-items: center

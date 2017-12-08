@@ -1,4 +1,8 @@
-// 歌曲收据类
+import {getLyric} from 'api/song.js';
+import {ERR_OK} from 'api/config.js';
+import {Base64} from 'js-base64';
+
+// 歌曲数据类
 export default class Song {
   constructor({id, mid, name, singer, album, duration, image, url}) {
       this.id = id;
@@ -10,6 +14,21 @@ export default class Song {
       this.image = image;
       this.url = url;
   };
+  getSongLyric() {
+    if(this.lyric) {
+      return Promise.resolve(this.lyric);
+    }
+    return new Promise((resolve, reject) => {
+      getLyric(this.id).then(res => {
+        if(res.retcode === ERR_OK) {
+          this.lyric = Base64.decode(res.lyric);
+          resolve(this.lyric);
+        }else {
+          reject(new Error('no lyric'));
+        }
+      });
+    });
+  }
 };
 
 export function createSong(songData) {

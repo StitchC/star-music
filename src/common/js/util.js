@@ -11,11 +11,12 @@ function getRandomIndex(min, max) {
 }
 
 export function shuffle(arr) {
-  for(let i = 0; i < arr.length; i++) {
+  let result = [...arr];
+  for(let i = 0; i < result.length; i++) {
     let randomIndex = getRandomIndex(0, i);
-    let tmp = arr[randomIndex];
-    arr[randomIndex] = arr[i];
-    arr[i] = tmp;
+    let tmp = result[randomIndex];
+    result[randomIndex] = result[i];
+    result[i] = tmp;
   }
-  return arr;
+  return result;
 }

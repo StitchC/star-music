@@ -6,7 +6,7 @@ import {shuffle} from 'common/js/util.js';
 
 export const selectPlay = function({commit}, {list, index}) {
   // 当点击音乐列表的时候提交多个mutation
-  
+
   // 1. 设置播放状态为true
   commit(types.SET_PLAYING_STATE, true);
   // 2. 设置播放器为全屏状态
@@ -24,9 +24,10 @@ export const selectPlay = function({commit}, {list, index}) {
 export const setRandomPlay = function({commit}, {list}) {
   // 拷贝一个list 的副本 避免随机排序的时候影响到原本的数据
   let tempList = [...list];
+  console.log(tempList);
   let randomList = null;
   randomList = shuffle(tempList);
-  
+
   // 1. 设置播放状态为true
   commit(types.SET_PLAYING_STATE, true);
   // 2. 设置播放器为全屏状态

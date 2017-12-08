@@ -35,7 +35,7 @@ apiRoutes.get('/getSongList', function (req, res) {
 //获取歌词
 apiRoutes.get('/lyric', function (req, res) {
   var url = 'https://c.y.qq.com/lyric/fcgi-bin/fcg_query_lyric_new.fcg'
-  
+
   axios.get(url, {
     headers: {
       referer: 'https://c.y.qq.com/',
@@ -78,7 +78,7 @@ const devWebpackConfig = merge(baseWebpackConfig, {
   },
   // cheap-module-eval-source-map is faster for development
   devtool: config.dev.devtool,
-  
+
   // these devServer options should be customized in /config/index.js
   devServer: {
     clientLogLevel: 'warning',
@@ -111,6 +111,30 @@ const devWebpackConfig = merge(baseWebpackConfig, {
         }).catch((e) => {
           console.log(e)
         })
+      }),
+      //获取歌词
+      app.get('/lyric', function (req, res) {
+        var url = 'http://c.y.qq.com/lyric/fcgi-bin/fcg_query_lyric.fcg'
+
+        axios.get(url, {
+          headers: {
+            referer: `http://i.y.qq.com/v8/playsong.html?ADTAG=newyqq.song&songmid=${req.query.musicid}`,
+            host: 'c.y.qq.com'
+          },
+          params: req.query
+        }).then((response) => {
+          var ret = response.data;
+          if (typeof ret === 'string') {
+            var reg = /^\w+\(({[^()]+})\)$/;
+            var matches = ret.match(reg);
+            if (matches) {
+              ret = JSON.parse(matches[1])
+            }
+          }
+          res.json(ret)
+        }).catch((e) => {
+          console.log(e)
+        })
       })
     }
   },
@@ -140,7 +164,7 @@ module.exports = new Promise((resolve, reject) => {
       process.env.PORT = port
       // add port to devServer config
       devWebpackConfig.devServer.port = port
-      
+
       // Add FriendlyErrorsPlugin
       devWebpackConfig.plugins.push(new FriendlyErrorsPlugin({
         compilationSuccessInfo: {
@@ -150,7 +174,7 @@ module.exports = new Promise((resolve, reject) => {
           ? utils.createNotifierCallback()
           : undefined
       }))
-      
+
       resolve(devWebpackConfig)
     }
   })

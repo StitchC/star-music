@@ -1,6 +1,6 @@
 <template>
-  <div class="singer-wrapper">
-    <list-view :data="singerList" @select="selectSinger"></list-view>
+  <div class="singer-wrapper" ref="wrap">
+    <list-view :data="singerList" @select="selectSinger" ref="list"></list-view>
     <router-view></router-view>
   </div>
 </template>
@@ -10,12 +10,15 @@
   import {ERR_OK} from 'api/config.js';
   import Singer from 'common/js/Singer.js';
   import listView from 'base/list-view/list-view.vue';
-  import {mapMutations} from 'vuex';  // vuex 语法糖
+  import {mapMutations, mapGetters} from 'vuex';  // vuex 语法糖
+  import {playListMixin} from 'common/js/mixin.js';
 
+  const MINI_PLAYER_HEIGHT = 60; // 迷你播放器的高度
   const HOT_SINGER_TITLE = '热门'; // 热门歌手分类的标题
   const HOT_SINGER_LEN = 10; // 热门歌手的数量
 
   export default {
+    mixins: [playListMixin],
     data() {
       return {
         singerList: []
@@ -27,7 +30,17 @@
     components: {
       'list-view': listView
     },
+    computed: {
+      ...mapGetters([
+        'playList'
+      ])
+    },
     methods: {
+      handlerPlayList(playList) {
+        const height = playList.length > 0 ? MINI_PLAYER_HEIGHT + 'px' : '';
+        this.$refs.wrap.style.bottom = height;
+        this.$refs.list.refresh();
+      },
       selectSinger(singer) {
         this.$router.push({
           path: `/singer/${singer.user_id}`

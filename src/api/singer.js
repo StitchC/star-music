@@ -20,7 +20,7 @@ export function getSingerList() {
 
 export function getSingerDetails(singerId) {
   const url = 'https://c.y.qq.com/v8/fcg-bin/fcg_v8_singer_track_cp.fcg';
-  
+
   const params = Object.assign({}, commonParams, {
     singerid: singerId,
     uin: 0,
@@ -32,6 +32,6 @@ export function getSingerDetails(singerId) {
     num: 100,
     begin: 0
   });
-  
+
   return jsonp(url, params, options);
 }

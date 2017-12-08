@@ -38,12 +38,15 @@
     import Loading from 'base/loading/loading.vue';
     import {prefixStyle} from 'common/js/dom.js';
     import {mapActions, mapGetters, mapMutations} from 'vuex';
+    import {playListMixin} from 'common/js/mixin.js';
 
     const RESERVE_HEIGHT = 40; // 顶部歌手名栏的高度
+    const MINI_PLAYER_HEIGHT = 60;
     const transform = prefixStyle('transform');
     const backdrop = prefixStyle('backdrop-filter');
 
     export default {
+        mixins: [playListMixin],
         data() {
           return {
             posY: 0
@@ -88,13 +91,10 @@
             ])
         },
         methods: {
-          _copySongList() {
-            // 赋值歌曲列表副本
-            let tempArr = [];
-            for(let i = 0; i < this.songs.length; i++) {
-              tempArr.push(this.songs[i]);
-            }
-            return tempArr;
+          handlerPlayList(playList) {
+            const bottom = playList.length > 0 ? MINI_PLAYER_HEIGHT + 'px' : '';
+            this.$refs.list.$el.style.bottom = bottom;
+            this.$refs.list.refresh();
           },
           onScroll(pos) {
            this.posY = pos.y;
@@ -103,7 +103,7 @@
             this.$router.push('/singer');
           },
           selectSong(item, index) {
-            let songs = this._copySongList();
+            let songs = [...this.songs];
             this.selectPlay({
               list: songs,
               index: index
@@ -111,7 +111,9 @@
           },
           randomPlay() {
             // 提交 action 更改播放列表，顺序列表的播放
-            this.setRandomPlay(this.songs);
+            this.setRandomPlay({
+              list: this.songs
+            });
           },
           ...mapActions([
             'selectPlay',

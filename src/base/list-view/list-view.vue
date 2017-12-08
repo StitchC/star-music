@@ -79,6 +79,9 @@
       loading: Loading
     },
     methods: {
+      refresh() {
+        this.$refs.scroll.refresh();
+      },
       selectItem(e, item) {
         this.$emit('select', item);
       },

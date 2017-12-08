@@ -1,5 +1,5 @@
 <template>
-  <div class="recommend-wrapper">
+  <div class="recommend-wrapper" ref="wrap">
     <scroll ref="scroll" class="recommend-content" :data="songListData">
       <div>
         <div class="slider-wrapper">
@@ -39,8 +39,13 @@
   import {ERR_OK} from 'api/config.js';
   import Scroll from 'base/scroll/scroll.vue';
   import Loading from 'base/loading/loading.vue';
+  import {playListMixin} from 'common/js/mixin';
+
+
+  const MINI_PLAYER_HEIGHT = 60; // 迷你播放器的高度
 
   export default {
+    mixins: [playListMixin],
     data() {
       return {
         sliderData: [],
@@ -60,6 +65,11 @@
       loading: Loading
     },
     methods: {
+      handlerPlayList(playList) {
+        const height = playList.length > 0 ? MINI_PLAYER_HEIGHT + 'px' : '';
+        this.$refs.wrap.style.bottom = height;
+        this.$refs.scroll.refresh();
+      },
       _getRecommend() {
         getRecommend().then((res) => {
           if (res.code === ERR_OK) {
